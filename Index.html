@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RB Constructions - Tender System</title>
+<style>
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #f4f6f9;
+}
+
+header {
+  background: #1e3a8a;
+  color: white;
+  padding: 15px;
+  text-align: center;
+}
+
+.container {
+  padding: 20px;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.box {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+button {
+  padding: 10px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 10px;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>RB Constructions - Tender Monitoring</h2>
+</header>
+
+<div class="container">
+
+<!-- DASHBOARD -->
+<div class="dashboard">
+  <div class="box">Active: <span id="active">0</span></div>
+  <div class="box">Completed: <span id="completed">0</span></div>
+  <div class="box">Delayed: <span id="delayed">0</span></div>
+  <div class="box">Total Value: ₹<span id="value">0</span></div>
+  <div class="box">Total Expense: ₹<span id="expense">0</span></div>
+  <div class="box">Balance: ₹<span id="balance">0</span></div>
+</div>
+
+<br>
+
+<button onclick="showForm()">➕ Add New Tender</button>
+
+<!-- FORM -->
+<div id="formBox" class="hidden">
+  <h3>Add Tender</h3>
+
+  <input id="name" placeholder="Tender Name">
+  <input id="id" placeholder="Tender ID">
+  <input id="dept" placeholder="Department">
+  <input id="valueInput" type="number" placeholder="Tender Value">
+  <input id="start" type="date">
+  <input id="end" type="date">
+  <input id="progress" type="number" placeholder="Progress %" value="0">
+  <select id="status">
+    <option>Active</option>
+    <option>Completed</option>
+    <option>Delayed</option>
+  </select>
+  <input id="expenseInput" type="number" placeholder="Expense" value="0">
+  <input id="incharge" placeholder="Site Incharge">
+  <textarea id="remarks" placeholder="Remarks"></textarea>
+
+  <button onclick="saveTender()">Save Tender</button>
+</div>
+
+<!-- TENDER LIST -->
+<div id="list"></div>
+
+</div>
+
+<script>
+let tenders = JSON.parse(localStorage.getItem("tenders")) || [];
+
+function showForm() {
+  document.getElementById("formBox").classList.toggle("hidden");
+}
+
+function saveTender() {
+  let tender = {
+    name: name.value,
+    id: id.value,
+    dept: dept.value,
+    value: Number(valueInput.value),
+    start: start.value,
+    end: end.value,
+    progress: Number(progress.value),
+    status: status.value,
+    expense: Number(expenseInput.value),
+    incharge: incharge.value,
+    remarks: remarks.value,
+    history: []
+  };
+
+  tenders.push(tender);
+  localStorage.setItem("tenders", JSON.stringify(tenders));
+
+  render();
+}
+
+function deleteTender(index) {
+  tenders.splice(index, 1);
+  localStorage.setItem("tenders", JSON.stringify(tenders));
+  render();
+}
+
+function updateTender(index) {
+  let p = prompt("New Progress %");
+  let e = prompt("New Expense");
+  let r = prompt("Remarks");
+
+  if(p === null) return;
+
+  let t = tenders[index];
+
+  t.history.push({
+    date: new Date().toLocaleDateString(),
+    progress: t.progress,
+    expense: t.expense,
+    remarks: t.remarks
+  });
+
+  t.progress = Number(p);
+  t.expense = Number(e);
+  t.remarks = r;
+
+  localStorage.setItem("tenders", JSON.stringify(tenders));
+  render();
+}
+
+function render() {
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  let active=0, completed=0, delayed=0;
+  let totalValue=0, totalExpense=0;
+
+  tenders.forEach((t, i) => {
+
+    totalValue += t.value;
+    totalExpense += t.expense;
+
+    if(t.status=="Active") active++;
+    if(t.status=="Completed") completed++;
+    if(t.status=="Delayed") delayed++;
+
+    let remaining = t.value - t.expense;
+
+    list.innerHTML += `
+      <div class="card">
+        <h3>${t.name}</h3>
+        ID: ${t.id} <br>
+        Dept: ${t.dept} <br>
+        Value: ₹${t.value} <br>
+        Progress: ${t.progress}% <br>
+        Status: ${t.status} <br>
+        Expense: ₹${t.expense} <br>
+        Remaining: ₹${remaining} <br>
+        Incharge: ${t.incharge} <br>
+        Remarks: ${t.remarks} <br><br>
+
+        <button onclick="updateTender(${i})">Update</button>
+        <button onclick="deleteTender(${i})" style="background:red;">Delete</button>
+
+        <h4>History</h4>
+        ${t.history.map(h => `
+          <div>
+            ${h.date} - ${h.progress}% - ₹${h.expense} - ${h.remarks}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  });
+
+  document.getElementById("active").innerText = active;
+  document.getElementById("completed").innerText = completed;
+  document.getElementById("delayed").innerText = delayed;
+  document.getElementById("value").innerText = totalValue;
+  document.getElementById("expense").innerText = totalExpense;
+  document.getElementById("balance").innerText = totalValue - totalExpense;
+}
+
+render();
+</script>
+
+</body>
+</html>
